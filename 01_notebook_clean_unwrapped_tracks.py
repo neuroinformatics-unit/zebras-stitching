@@ -42,7 +42,7 @@ assert video_dir.exists()
 filename = "20250325_2228_id_unwrapped.h5"
 file_path = data_dir / filename
 video_path = video_dir / "21Jan_007.mp4"
-background_path = video_dir / "21Jan_007_unwrapped_bacground.png"
+background_path = video_dir / "21Jan_007_unwrapped_background.png"
 for path in [file_path, video_path, background_path]:
     assert path.exists()
 

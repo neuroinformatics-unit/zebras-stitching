@@ -11,25 +11,23 @@ import pandas as pd
 import sleap_io as sio
 import xarray as xr
 from movement.io import load_poses, save_poses
+from datetime import datetime
 
-# import scipy
-# from movement.utils.broadcasting import make_broadcastable
-# from scipy.spatial.transform import Rotation as R
 from skimage.transform import warp
 
-# %matplotlib widget -- uncomment for interactive plotting
-
+# Uncomment the following line for interactive plotting
+%matplotlib widget 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # Input data paths
 
-repo_root = Path(__file__).parents[1]
+repo_root = Path(__file__).parents[0]
 data_dir = repo_root / "data"
-transforms_dir = repo_root / "stitching-elastix"
+transforms_dir = data_dir / "elastix"
 
-filename = "20250325_2228_id"
-file_path = data_dir / filename
-transforms_file = transforms_dir / "out_euler_frame.csv"
-video_file = repo_root.parent / "videos" / "21Jan_007.mp4"
+filename = Path("20250325_2228_id.slp")
+file_path = data_dir / filename 
+transforms_file = transforms_dir / "out_euler_frame_masked.csv"
+video_file = repo_root / "videos" / "21Jan_007.mp4"
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # Read video
@@ -267,7 +265,7 @@ ax.set_xlabel("x (pixels)")
 ax.set_ylabel("y (pixels)")
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-# Compute blended image using one very n frames
+# Compute blended image applying max of one very n frames
 blend_step = 10
 list_frames = list(range(position_array_ICS0.values.shape[0]))
 list_frames_to_plot = list_frames[0:-1:blend_step]
@@ -301,7 +299,13 @@ for f_i, f in enumerate(list_frames_to_plot):
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # % Save blended image
 
-matplotlib.image.imsave(f"Figure_blended_n{blend_step}.png", blended_warped_img)
+# get string timestamp of today in yyyymmdd_hhmmss
+timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+matplotlib.image.imsave(
+    Path("figures") / f"Figure_blended_n{blend_step}_{timestamp}.png", 
+    blended_warped_img
+)
 
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -320,7 +324,7 @@ for ind in position_array_ICS0.individuals:
         cmap="tab20",
     )
 ax.set_aspect("equal")
-# ax.invert_yaxis()
+
 ax.set_xlabel("x (pixels)")
 ax.set_ylabel("y (pixels)")
 
@@ -340,7 +344,10 @@ ds_export = load_poses.from_numpy(
 
 ds_export.attrs["source_file"] = ""
 
+# get string timestamp of  today in yyyymmdd_hhmmss
+timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
 slp_file = save_poses.to_sleap_analysis_file(
     ds_export,
-    data_dir / f"{filename}_unwrapped.h5",
+    data_dir / f"{filename.name}_unwrapped_{timestamp}.h5",
 )
