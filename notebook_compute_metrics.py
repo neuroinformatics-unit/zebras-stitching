@@ -11,21 +11,24 @@ It computes the following metrics:
 
 """
 
+import os
+
 # %%
 # Imports
 # -------
 from pathlib import Path
-import os
 
 import matplotlib.pyplot as plt
-import xarray as xr
 import numpy as np
-
+import xarray as xr
 from movement.io import load_poses
 from movement.kinematics import compute_pairwise_distances, compute_speed
 from movement.transforms import scale
 from movement.utils.vector import compute_norm, convert_to_unit
 
+# For interactive plots: install ipympl with `pip install ipympl` and uncomment
+# the following line in your notebook
+# %matplotlib widget
 # %%
 # Print the version of movement that is being used (for reproducibility)
 os.system("movement info")
@@ -44,7 +47,7 @@ assert video_dir.exists()
 filename = "20250325_2228_id_unwrapped_clean_sleap.h5"
 file_path = data_dir / filename
 video_path = video_dir / "21Jan_007.mp4"
-background_path = video_dir / "21Jan_007_unwrapped_bacground.png"
+background_path = video_dir / "21Jan_007_unwrapped_background.png"
 for path in [file_path, video_path, background_path]:
     assert path.exists()
 
@@ -66,7 +69,7 @@ body_length_std = body_length.std()
 body_length_mean = body_length.mean()
 body_length_median = body_length.median()
 
-# %% 
+# %%
 # Plot body length histogram, coloured by individuals
 
 fig, ax = plt.subplots()
@@ -111,16 +114,49 @@ body_vector_avg = body_vector_filtered.mean("individuals")
 print(body_vector_avg.shape)
 
 # %%
+# Compute ....
+
+# Compute average **unit** body vector across all individuals per frame
+# (if unit, the average is the same as the resultant vector)
+body_vector_unit_avg = convert_to_unit(body_vector_filtered).mean("individuals")
+print(body_vector_unit_avg.shape)
+
+
+# Compute dot product between each individual's unit body vector and
+# the average unit body vector
+# ATTENTION!! body_vector_avg_unit != body_vector_unit_avg
+body_vector_filtered_unit = convert_to_unit(body_vector_filtered)
+cos_body_vector = xr.dot(
+    body_vector_filtered_unit,
+    body_vector_unit_avg,
+    dims=["space"],
+)
+
+
+# Plot the alignment of each individual with the average unit body vector
+# across time
+fig, ax = plt.subplots()
+im = ax.matshow(
+    cos_body_vector,
+    aspect="auto",
+    cmap="coolwarm",
+)
+cbar = plt.colorbar(im)
+cbar.set_label("alignment with average unit body vector")
+ax.get_images()[0].set_clim(-1, 1)
+ax.set_xlabel("individuals")
+ax.set_ylabel("frame")
+
+# %%
 # Compute the herd's polarisation
 # -------------------------------
 # We define polarisation as the mean resultant length of the body vectors:
 # 1. convert body length vectors to unit vectors
-# 2. compute the mean of the unit vectors
-# 3. compute the norm of the mean resultant unit vector as the polarisation
+# 2. compute the resultant of the unit vectors
+# 3. compute the norm of the resultant unit vector as the polarisation
 
 # Compute average **unit** body vector per frame
 # (if unit, average is the same as resultant vector)
-body_vector_unit_avg = convert_to_unit(body_vector_filtered).mean("individuals")
 polarisation = compute_norm(body_vector_unit_avg)
 polarisation.name = "Herd polarisation"
 
@@ -132,9 +168,7 @@ polarisation.name = "Herd polarisation"
 # (this is not necessary, but it makes the plots easier to interpret)
 
 position_scaled = scale(
-    ds.position,
-    factor=1/body_length_median.item(),
-    space_unit="body_length"
+    ds.position, factor=1 / body_length_median.item(), space_unit="body_length"
 )
 
 # %%
@@ -187,9 +221,7 @@ distances = xr.concat(
     distances_dict.values(),
     dim="id_pair",
 )
-distances = distances.assign_coords(
-    id_pair=list(distances_dict.keys())
-)
+distances = distances.assign_coords(id_pair=list(distances_dict.keys()))
 distances.name = "Distance (body lengths)"
 print(distances)
 
