@@ -44,7 +44,7 @@ video_dir = repo_root / "videos"
 assert data_dir.exists()
 assert video_dir.exists()
 
-filename = "20250325_2228_id_unwrapped_clean_sleap.h5"
+filename = "20250325_2228_id_unwrapped_20250403_161408_clean_sleap.h5"
 file_path = data_dir / filename
 video_path = video_dir / "21Jan_007.mp4"
 background_path = video_dir / "21Jan_007_unwrapped_background.png"

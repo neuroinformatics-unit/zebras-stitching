@@ -39,7 +39,7 @@ video_dir = repo_root / "videos"
 assert data_dir.exists()
 assert video_dir.exists()
 
-filename = "20250325_2228_id_unwrapped.h5"
+filename = "20250325_2228_id_unwrapped_20250403_161408.h5"
 file_path = data_dir / filename
 video_path = video_dir / "21Jan_007.mp4"
 background_path = video_dir / "21Jan_007_unwrapped_background.png"
@@ -268,3 +268,5 @@ ds_clean.attrs = ds.attrs.copy()
 save_poses.to_sleap_analysis_file(
     ds_clean, data_dir / filename.replace(".h5", "_clean_sleap.h5"),
 )
+
+# %%

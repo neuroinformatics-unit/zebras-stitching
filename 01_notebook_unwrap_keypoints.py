@@ -16,7 +16,7 @@ from datetime import datetime
 from skimage.transform import warp
 
 # Uncomment the following line for interactive plotting
-%matplotlib widget 
+# %matplotlib widget 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # Input data paths
 
@@ -24,9 +24,14 @@ repo_root = Path(__file__).parents[0]
 data_dir = repo_root / "data"
 transforms_dir = data_dir / "elastix"
 
+# Wrapped data 
 filename = Path("20250325_2228_id.slp")
 file_path = data_dir / filename 
+
+# Elastix transforms
 transforms_file = transforms_dir / "out_euler_frame_masked.csv"
+
+# Video file
 video_file = repo_root / "videos" / "21Jan_007.mp4"
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -349,5 +354,7 @@ timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
 slp_file = save_poses.to_sleap_analysis_file(
     ds_export,
-    data_dir / f"{filename.name}_unwrapped_{timestamp}.h5",
+    data_dir / f"{filename.stem}_unwrapped_{timestamp}.h5",
 )
+
+# %%
