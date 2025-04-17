@@ -6,3 +6,4 @@ scikit-image
 tifffile
 tqdm
 ipykernel
+ipympl
