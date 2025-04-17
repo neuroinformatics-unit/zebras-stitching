@@ -1,0 +1,8 @@
+movement
+sleap-io
+itk
+itk-elastix
+scikit-image
+tifffile
+tqdm
+ipykernel
