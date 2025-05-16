@@ -27,7 +27,9 @@ data_dir = repo_root / "data"
 transforms_dir = data_dir / "elastix"
 
 # Wrapped data
-filename = Path("20250325_2228_id.slp")
+filename_zebras = Path("20250325_2228_id.slp")
+filename_trees = Path("21Jan_007_tracked_trees_reliable_sleap.h5")
+filename = filename_trees  # choose the file you want to unwrap
 file_path = data_dir / filename
 
 # Elastix transforms
@@ -100,7 +102,7 @@ position_array_homogeneous = xr.concat(
     dim="space",
 )
 
-print(position_array_homogeneous)
+print(position_array_homogeneous)  # shape (time, 3, keypoints, individuals)
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # Compute change of basis matrix:
@@ -200,20 +202,25 @@ ax.plot(translation_norm)
 
 position_array_ICS0 = (
     np.linalg.inv(Q_corner_to_centre)  # (3, 3)
-    @ rotation_to_ICS0_centre_array  # (6294, 3, 3)
-    @ translation_to_ICS0_centre_array  # (6294, 3, 3)
+    @ rotation_to_ICS0_centre_array  # (time, 3, 3)
+    @ translation_to_ICS0_centre_array  # (time, 3, 3)
     @ Q_corner_to_centre  # (3, 3)
     @ np.expand_dims(
         np.moveaxis(position_array_homogeneous.values, [0, 1], [2, 3]), axis=-1
-    )  # (2, 322, 6294, 3, 1);
+    )  # (keypoints, individuals, time, 3, 1)
     # we move the array axes to the end as per numpy.matmul convention
     # https://numpy.org/doc/2.0/reference/generated/numpy.matmul.html --> Notes
 )
-
-# undo the reordering dimensions required for broadcasting
-
-position_array_ICS0 = np.moveaxis(position_array_ICS0, [0, 1], [-2, -1]).squeeze(axis=-2)
 print(position_array_ICS0.shape)
+
+# %%
+# Remove the last expanded axis, returning (keypoints, individuals, time, 3)
+position_array_ICS0 = position_array_ICS0.squeeze(axis=-1)
+# Undo the reordering dimensions required for broadcasting,
+# returning (time, 3, keypoints, individuals)
+position_array_ICS0 = np.moveaxis(position_array_ICS0, [0, 1], [-2, -1])
+print(position_array_ICS0.shape)
+
 
 # %%
 # format the result as xarray
@@ -267,28 +274,22 @@ ax.set_aspect("equal")
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # plot keypoints for one individual
-ind = "track_0"
+ind = 0  # the index of the individual to plot
 fig, ax = plt.subplots()
-for f in range(position_array_ICS0.shape[0]):
-    ax.plot(
-        [
-            position_array_ICS0.sel(time=f, individuals=ind, keypoints="H").sel(
-                space="x"
-            ),
-            position_array_ICS0.sel(time=f, individuals=ind, keypoints="T").sel(
-                space="x"
-            ),
-        ],
-        [
-            position_array_ICS0.sel(time=f, individuals=ind, keypoints="H").sel(
-                space="y"
-            ),
-            position_array_ICS0.sel(time=f, individuals=ind, keypoints="T").sel(
-                space="y"
-            ),
-        ],
-        "go-",
-    )
+
+# Get all keypoint names
+keypoints = position_array_ICS0.keypoints.values
+
+for f in range(position_array_ICS0.shape[0]):  # iterate over time
+    # Plot each keypoint's position
+    for kp in keypoints:
+        ax.plot(
+            position_array_ICS0.isel(individuals=ind).sel(
+                time=f, keypoints=kp).sel(space="x"),
+            position_array_ICS0.isel(individuals=ind).sel(
+                time=f, keypoints=kp).sel(space="y"),
+            "go",
+        )
 
 ax.set_aspect("equal")
 ax.invert_yaxis()
@@ -450,9 +451,10 @@ ds_export.attrs["source_file"] = ""
 # get string timestamp of  today in yyyymmdd_hhmmss
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
+export_dir = data_dir / "itk-all-approach"
 slp_file = save_poses.to_sleap_analysis_file(
     ds_export,
-    data_dir / f"{filename.stem}_unwrapped_{timestamp}.h5",
+    export_dir / f"{filename.stem}_unwrapped_{timestamp}.h5",
 )
 
 # %%
