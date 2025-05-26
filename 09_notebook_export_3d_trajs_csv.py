@@ -16,14 +16,15 @@ from utils import compute_Q_world2plane, get_orthophoto_corners_in_3d
 
 data_dir = Path("data")
 
-# "uncleaned" 3D trajectories
+# "uncleaned" 3D trajectories zebras
 # zebras_input_file = data_dir / "approach-sfm-interp" / "20250325_2228_id_sfm_interp_WCS_3d_20250516_155745.h5"
 
-# or "cleaned" 2D trajectories
+# or "cleaned" 2D trajectories zebras or reliable trees
 zebras_input_file = (
     data_dir
     / "approach-sfm-interp"
-    / "20250325_2228_id_sfm_interp_PCS_2d_20250516_155745_clean.h5"
+    # / "21Jan_007_tracked_trees_reliable_sleap_sfm_interp_PCS_2d_20250516_160103.h5"  # trees
+    / "20250325_2228_id_sfm_interp_PCS_2d_20250516_155745_clean.h5" # zebras
 )
 
 
