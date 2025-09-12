@@ -209,6 +209,7 @@ ax[1].set_xlim(-1, 1)
 ax[1].set_ylim(-1, 1)
 ax[1].set_xticks([-1, 0, 1])
 ax[1].set_yticks([-1, 0, 1])
+ax[1].invert_yaxis()  # to match image coordinate system in video
 ax[1].set_aspect("equal")
 ax[1].set_xlabel("x")
 ax[1].set_ylabel("y")
@@ -536,6 +537,7 @@ def polarisation_plot_single_frame(frame_index):
     ax[1].set_ylim(-1, 1)
     ax[1].set_xticks([-1, 0, 1])
     ax[1].set_yticks([-1, 0, 1])
+    ax[1].invert_yaxis()  # to match image coordinate system in video
     ax[1].set_aspect("equal")
     ax[1].set_xlabel("x")
     ax[1].set_ylabel("y")
