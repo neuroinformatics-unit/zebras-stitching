@@ -9,9 +9,11 @@ and cleaned zebra tracks, so it should be executed after
 # %%
 # Imports
 # -------
+from datetime import datetime
 import os
 from pathlib import Path
 
+import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import numpy as np
 import xarray as xr
@@ -54,7 +56,7 @@ assert file_path.exists()
 
 # %%
 # Now, let's load the data
-ds = load_poses.from_file(file_path, source_software="SLEAP", fps=30)
+ds = load_poses.from_file(file_path, source_software="SLEAP", fps=29.97)
 print(ds)
 
 # %%
@@ -126,19 +128,19 @@ polarisation_vector = body_vector_filtered_unit.mean("individuals")
 print(polarisation_vector.shape)
 
 # The polarisation vector is not a unit vector!
-# Its norm is the "polarisation"
+# Its norm is the "polarisation", i.e.
 # norm(body_vector_filtered_unit_avg) == polarisation
 polarisation = compute_norm(polarisation_vector)
 polarisation.name = "Herd polarisation"
 
-print(polarisation) # norm is not unit
+print(polarisation)  # norm is not unit
 
 # %%
-# Plot polarisation vector evolution across time
+# Plot the evolution of the polarisation vector
 
-# Select a frame index to visualise body vectors and polarisation vector
+# Visualise for a selected frame
 # For reference, the frame index with max polarisation: 3160
-frame_index = 3890
+frame_index = 3160
 fig, ax = plt.subplots(1, 2, width_ratios=[1.3, 1])
 
 # plot polarisation norm over time
@@ -225,23 +227,20 @@ cos_body_vector = xr.dot(
     body_vector_filtered_unit,
     convert_to_unit(polarisation_vector),
     dims=["space"],
-)  
+)
 
-# %%
-# Plot the alignment of each individual with the unit polarisation vector
-# -----------------------------------------------------------------------------
-
+# plot
 fig, ax = plt.subplots(1, 2, sharey=True, width_ratios=[4, 1])
 
 # plot alignment with unit polarisation vector per individual
-# Empty values (i.e. frames in which the body vector is nans) are shown in white by default. 
+# Empty values (i.e. frames in which the body vector is nans) are shown in white by default.
 # We need a colormap:
-# - with three distinct colors for -1, 0, and 1, and 
+# - with three distinct colors for -1, 0, and 1, and
 # - that does not use white in its range.
 im = ax[0].matshow(
     cos_body_vector,
     aspect="auto",
-    cmap="managua", 
+    cmap="managua",
 )
 cbar = plt.colorbar(im)
 cbar.set_label("alignment with average unit body vector")
@@ -270,13 +269,44 @@ position_scaled = scale(
 # Compute speed of each zebra's centroid, and then average across individuals
 
 centroid = position_scaled.mean("keypoints")
-speed_avg = compute_speed(centroid).mean("individuals")
+speed = compute_speed(centroid)
+speed_avg = speed.mean("individuals")
 speed_avg.name = "Average speed (body lengths/s)"
 log10_speed_avg = np.log10(speed_avg)
 log10_speed_avg.name = "log10 Average speed (body lengths/s)"
 
+
 # %%
-# plot polarisation and color by log of mean centroid-speed
+# Plot speed per individual across time
+# --------------------------------------
+fig, ax = plt.subplots()
+im = ax.matshow(
+    speed,
+    aspect="auto",
+    cmap="viridis",
+)
+
+# convert frames to seconds in y-axis
+time_ticks_step = 1498
+time_ticks = np.arange(0, len(speed.time), time_ticks_step) 
+time_labels = [f"{t:.0f}" for t in speed.time.values[0:-1:time_ticks_step]]
+ax.set_yticks(time_ticks)
+ax.set_yticklabels(time_labels)
+ax.tick_params(axis='x', bottom=True, top=False, labelbottom=True, labeltop=False)
+
+ax.set_xlabel("individual")
+ax.set_ylabel("time (s)") 
+
+# add colorbar
+cbar = plt.colorbar(im)
+cbar.set_label("speed (BL/s)")
+
+# All values above the 99th percentile are shown in yellow in the colorbar
+speed_99th_percentile = np.round(speed.quantile(0.99)).item()
+ax.get_images()[0].set_clim(0, speed_99th_percentile) 
+ax.set_title("Speed per individual across time")
+# %%
+# Plot polarisation and color by log of mean centroid-speed
 
 fig, ax = plt.subplots()
 sc = ax.scatter(
@@ -428,5 +458,121 @@ distances_nn.max(dim="individuals").plot(label="max", ax=ax)
 ax.legend()
 ax.set_title("Distance to nearest neighbor")
 ax.set_xlabel("Time (s)")
+
+# %%
+# Compute polarisation animation
+# -----------------------------------
+
+# Define a function to plot the evolution of the polarisation vector
+# across time
+def polarisation_plot_single_frame(frame_index):
+    # clear pre-existing plots
+    ax[0].clear()
+    ax[1].clear()
+
+    # plot polarisation norm over time
+    ax[0].plot(polarisation, color="tab:blue", zorder=1)
+    ax[0].scatter(
+        frame_index,
+        polarisation.isel(time=frame_index),
+        color="black",
+        marker="o",
+        s=50,
+        zorder=2,
+    )
+    ax[0].vlines(
+        frame_index,
+        ymin=0,
+        ymax=1.1,
+        color="k",
+        linestyle="--",
+    )
+    ax[0].set_ylim(0, 1.1)
+    ax[0].set_xlabel("frame")
+    ax[0].set_ylabel("polarisation")
+
+    # plot individual unit body vectors
+    ax[1].quiver(
+        np.zeros((len(body_vector_filtered_unit.individuals), 1)),
+        np.zeros((len(body_vector_filtered_unit.individuals), 1)),
+        body_vector_filtered_unit.isel(time=frame_index, space=0).values,
+        body_vector_filtered_unit.isel(time=frame_index, space=1).values,
+        angles="xy",
+        scale=1,
+        scale_units="xy",
+        zorder=1,
+    )
+
+    # plot polarisation vector
+    ax[1].quiver(
+        np.zeros((len(polarisation_vector), 1)),
+        np.zeros((len(polarisation_vector), 1)),
+        polarisation_vector.isel(time=frame_index, space=0).values,
+        polarisation_vector.isel(time=frame_index, space=1).values,
+        angles="xy",
+        scale=1,
+        scale_units="xy",
+        color="red",
+        linewidths=1.5,
+        edgecolors="r",
+        zorder=3,
+    )
+
+    # plot unit polarisation vector
+    ax[1].quiver(
+        np.zeros((len(polarisation_vector), 1)),
+        np.zeros((len(polarisation_vector), 1)),
+        convert_to_unit(polarisation_vector).isel(time=frame_index, space=0).values,
+        convert_to_unit(polarisation_vector).isel(time=frame_index, space=1).values,
+        angles="xy",
+        scale=1,
+        scale_units="xy",
+        edgecolor=(0.3, 0, 0.7),
+        linewidths=0.5,
+        headlength=0,
+        zorder=2,
+    )
+    ax[1].set_xlim(-1, 1)
+    ax[1].set_ylim(-1, 1)
+    ax[1].set_xticks([-1, 0, 1])
+    ax[1].set_yticks([-1, 0, 1])
+    ax[1].set_aspect("equal")
+    ax[1].set_xlabel("x")
+    ax[1].set_ylabel("y")
+    ax[1].set_title(f"Unit body vectors at frame {frame_index}", fontsize=10)
+
+    return ax
+
+
+
+# Plot for first frame
+frame_index = 0
+fig, ax = plt.subplots(1, 2, width_ratios=[1.3, 1])
+ax[0].clear()
+ax[1].clear()
+polarisation_plot_single_frame(frame_index)
+plt.tight_layout(w_pad=2)
+
+start_frame = 0
+end_frame = len(polarisation) - 1
+frame_step = 1
+
+# Create the animation
+anim = animation.FuncAnimation(
+    fig,
+    polarisation_plot_single_frame,
+    frames=range(start_frame, end_frame, frame_step),
+    interval=np.round((1/ds.fps)*1000, 2),  # delay between frames in ms
+    repeat=False,
+    blit=True,  # True for better performance if possible
+)
+
+plt.show()
+
+# %%
+# Save the animation as a GIF (can be very slow)
+# by default, the fps is 1/interval in the animation object
+timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+anim.save(f"polarisation_animation_{timestamp}.gif", writer="pillow")
 
 # %%
