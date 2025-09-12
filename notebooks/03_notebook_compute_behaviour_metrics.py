@@ -4,11 +4,6 @@ This notebook computes metrics of herd behaviour from the unwrapped
 and cleaned zebra tracks, so it should be executed after
 "clean_unwrapped_tracks.py".
 
-It computes the following metrics:
-- Herd polarisation
-- Average speed
-- Inter-zebra distances
-
 """
 
 # %%
@@ -37,16 +32,14 @@ os.system("movement info")
 # ---------------------------------
 # These come from the output of the "clean_unwrapped_tracks.py" notebook.
 
-repo_root = Path(__file__).parent
+repo_root = Path(__file__).parents[1]
 data_dir = repo_root / "data"
 assert data_dir.exists()
 
 approach_to_path = {  # paths are relative to data_dir
-    "itk-all": (
-        "approach-itk-all/20250325_2228_id_unwrapped_20250403_161408_clean.h5"
-    ),
+    "itk-all": ("approach-itk-all/20250325_2228_id_unwrapped_20250403_161408_clean.h5"),
     "sfm-interp": (
-        "approach-sfm-interp/20250325_2228_id_sfm_interp_PCS_2d_20250516_155745_clean.h5" 
+        "approach-sfm-interp/20250325_2228_id_sfm_interp_PCS_2d_20250516_155745_clean.h5"
     ),
     "sfm-itk-interp": (
         "approach-sfm-itk-interp/20250325_2228_id_sfm_itk_interp_PCS_2d_20250517_230807_clean.h5"
@@ -71,7 +64,8 @@ print(ds)
 # and ending at keypoint "H" (head).
 
 body_vector = ds.position.sel(keypoints="H") - ds.position.sel(keypoints="T")
-# Select body vectors for which norm is outside mean +- 2 std
+
+# Compute body length stats
 body_length = compute_norm(body_vector)
 body_length_std = body_length.std()
 body_length_mean = body_length.mean()
@@ -79,7 +73,7 @@ body_length_median = body_length.median()
 
 # %%
 # Plot body length histogram, coloured by individuals
-
+# Mark limits for mean +- 2 std
 fig, ax = plt.subplots()
 counts, bins, _ = body_length.plot.hist(bins=100)
 ax.vlines(
@@ -117,63 +111,156 @@ body_vector_filtered = body_vector.where(
     )
 )
 
-# Compute average body vector per frame
+# Compute average body vector per frame after filtering
 body_vector_avg = body_vector_filtered.mean("individuals")
 print(body_vector_avg.shape)
 
 # %%
-# Compute the alignment of each individual with the average body orientation
-# across time
+# Compute the polarisation vector
 # -----------------------------------------------------------------------------
 
 # Compute average **unit** body vector across all individuals per frame
-# (if vectors are unit, their average is the same as the resultant vector)
-body_vector_unit_avg = convert_to_unit(body_vector_filtered).mean("individuals")
-print(body_vector_unit_avg.shape)
-
-
-# Compute dot product between each individual's unit body vector and
-# the average unit body vector
+# This is the polarisation vector
 body_vector_filtered_unit = convert_to_unit(body_vector_filtered)
+polarisation_vector = body_vector_filtered_unit.mean("individuals")
+print(polarisation_vector.shape)
+
+# The polarisation vector is not a unit vector!
+# Its norm is the "polarisation"
+# norm(body_vector_filtered_unit_avg) == polarisation
+polarisation = compute_norm(polarisation_vector)
+polarisation.name = "Herd polarisation"
+
+print(polarisation) # norm is not unit
+
+# %%
+# Plot polarisation vector evolution across time
+
+# Select a frame index to visualise body vectors and polarisation vector
+# For reference, the frame index with max polarisation: 3160
+frame_index = 3890
+fig, ax = plt.subplots(1, 2, width_ratios=[1.3, 1])
+
+# plot polarisation norm over time
+ax[0].plot(polarisation, zorder=1)
+ax[0].scatter(
+    frame_index,
+    polarisation.isel(time=frame_index),
+    color="black",
+    marker="o",
+    s=50,
+    zorder=2,
+)
+ax[0].vlines(
+    frame_index,
+    ymin=0,
+    ymax=1.1,
+    color="k",
+    linestyle="--",
+)
+ax[0].set_ylim(0, 1.1)
+ax[0].set_xlabel("frame")
+ax[0].set_ylabel("polarisation")
+
+# plot individual unit body vectors
+ax[1].quiver(
+    np.zeros((len(body_vector_filtered_unit.individuals), 1)),
+    np.zeros((len(body_vector_filtered_unit.individuals), 1)),
+    body_vector_filtered_unit.isel(time=frame_index, space=0).values,
+    body_vector_filtered_unit.isel(time=frame_index, space=1).values,
+    angles="xy",
+    scale=1,
+    scale_units="xy",
+    zorder=1
+)
+
+# plot polarisation vector
+ax[1].quiver(
+    np.zeros((len(polarisation_vector), 1)),
+    np.zeros((len(polarisation_vector), 1)),
+    polarisation_vector.isel(time=frame_index, space=0).values,
+    polarisation_vector.isel(time=frame_index, space=1).values,
+    angles="xy",
+    scale=1,
+    scale_units="xy",
+    color="red",
+    linewidths=1.5,
+    edgecolors="r",
+    zorder=3
+)
+
+# plot unit polarisation vector
+ax[1].quiver(
+    np.zeros((len(polarisation_vector), 1)),
+    np.zeros((len(polarisation_vector), 1)),
+    convert_to_unit(polarisation_vector).isel(time=frame_index, space=0).values,
+    convert_to_unit(polarisation_vector).isel(time=frame_index, space=1).values,
+    angles="xy",
+    scale=1,
+    scale_units="xy",
+    edgecolor=(.3, 0, .7),
+    linewidths=.5,
+    headlength=0,
+    zorder=2
+)
+ax[1].set_xlim(-1, 1)
+ax[1].set_ylim(-1, 1)
+ax[1].set_xticks([-1, 0, 1])
+ax[1].set_yticks([-1, 0, 1])
+ax[1].set_aspect("equal")
+ax[1].set_xlabel("x")
+ax[1].set_ylabel("y")
+ax[1].set_title(f"Unit body vectors at frame {frame_index}", fontsize=10)
+
+plt.tight_layout(w_pad=2)
+
+# %%
+# Inspect the alignment of each individual with the unit polarisation vector
+# -----------------------------------------------------------------------------
+
+# Compute the dot product between each individual's unit body vector and
+# the unit polarisation vector
+# the dot product is the cosine of the angle between the two unit vectors
 cos_body_vector = xr.dot(
     body_vector_filtered_unit,
-    body_vector_unit_avg,
+    convert_to_unit(polarisation_vector),
     dims=["space"],
-)  # the dot product is the cosine of the angle between the two unit vectors
+)  
 
+# %%
+# Plot the alignment of each individual with the unit polarisation vector
+# -----------------------------------------------------------------------------
 
-# Plot the alignment of each individual with the average unit body vector
-# across time
-fig, ax = plt.subplots()
-im = ax.matshow(
+fig, ax = plt.subplots(1, 2, sharey=True, width_ratios=[4, 1])
+
+# plot alignment with unit polarisation vector per individual
+# Empty values (i.e. frames in which the body vector is nans) are shown in white by default. 
+# We need a colormap:
+# - with three distinct colors for -1, 0, and 1, and 
+# - that does not use white in its range.
+im = ax[0].matshow(
     cos_body_vector,
     aspect="auto",
-    cmap="coolwarm",
+    cmap="managua", 
 )
 cbar = plt.colorbar(im)
 cbar.set_label("alignment with average unit body vector")
-ax.get_images()[0].set_clim(-1, 1)
-ax.set_xlabel("individuals")
-ax.set_ylabel("frame")
+ax[0].get_images()[0].set_clim(-1, 1)
+ax[0].set_xlabel("individuals")
+ax[0].set_ylabel("frame")
 
-# %%
-# Compute the herd's polarisation
-# -------------------------------
-# We define polarisation as the norm of the resultant unit body vector per frame.
-# The resultant unit vector is the average of the unit body vectors across individuals.
-# 1. convert body length vectors to unit vectors
-# 2. compute the resultant of the unit vectors
-# 3. compute the norm of the resultant unit vector as the polarisation
+# plot the norm of the polarisation vector (i.e. the polarisation) over time
+ax[1].plot(polarisation, np.arange(len(polarisation.time)))
+ax[1].set_xlim(0, 1.1)
+ax[1].set_xlabel(polarisation.name)
 
-polarisation = compute_norm(body_vector_unit_avg)
-polarisation.name = "Herd polarisation"
+plt.tight_layout(w_pad=2.5)
 
 
 # %%
 # Compute average speed and compare with polarisation
 # ---------------------------------------------------
 # First let's scale the data to body length units
-# (this is not necessary, but it makes the plots easier to interpret)
 
 position_scaled = scale(
     ds.position, factor=1 / body_length_median.item(), space_unit="body_length"
@@ -316,10 +403,9 @@ distances_nn.name = "Distance (body lengths)"
 # Compute the nearest neighbor distance for each individual
 for id in position_scaled.individuals.values:
     pairs_with_id = [pair for pair in distances_dict.keys() if id in pair]
-    distances_nn.loc[dict(individuals=id)] = distances.sel(
-        id_pair=pairs_with_id).min(
-            dim="id_pair", skipna=True
-        )
+    distances_nn.loc[dict(individuals=id)] = distances.sel(id_pair=pairs_with_id).min(
+        dim="id_pair", skipna=True
+    )
 
 print(distances_nn)
 
