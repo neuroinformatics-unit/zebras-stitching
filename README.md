@@ -6,6 +6,8 @@ This repository contains supporting code for the [pre-print](https://arxiv.org/a
 
 (* denotes equal contribution).
 
+This work was presented as a [poster](https://drive.google.com/file/d/12jIgd9ZnOM5mzc70Msj4i2omgVzRI8AT/view) at the CVPR 2025 workshop _CV4Animals_. You can also check [a cool clip from this data](https://drive.google.com/file/d/1nnaqnp5Sg8IhkfW3T-M1iS7zJ6yGCGe6/view).
+
 ## Installation
 
 From the root of the repository:
