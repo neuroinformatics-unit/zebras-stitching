@@ -3,10 +3,11 @@ Exploring how to stitch drone imagery and animal trajectories 🦓🦓🦓
 
 This repository contains supporting code for the [pre-print](https://arxiv.org/abs/2505.16882):
 > Duporge, I.\*, Miñano, S.\*, Sirmpilatze, N., Tatarnikov, I., Wolf, S., Tyson, A. L., & Rubenstein, D. (2025). _Tracking the Flight: Exploring a Computational Framework for Analyzing Escape Responses in Plains Zebra (Equus quagga)._ arXiv preprint arXiv:2505.16882. 
+>
+> (* denotes equal contribution).
 
-(* denotes equal contribution).
-
-This work was presented as a [poster](https://drive.google.com/file/d/12jIgd9ZnOM5mzc70Msj4i2omgVzRI8AT/view) at the CVPR 2025 workshop _CV4Animals_. You can also check [a cool clip from this data](https://drive.google.com/file/d/1nnaqnp5Sg8IhkfW3T-M1iS7zJ6yGCGe6/view).
+This work was presented as a [poster](https://drive.google.com/file/d/12jIgd9ZnOM5mzc70Msj4i2omgVzRI8AT/view) at the CVPR 2025 workshop _CV4Animals_. Click on the image below to watch a clip of the sample data used
+[![Preview of the data](https://github.com/neuroinformatics-unit/zebras-stitching/releases/download/zebras-clip/zebras_screenshot.png)](https://drive.google.com/file/d/1nnaqnp5Sg8IhkfW3T-M1iS7zJ6yGCGe6/view)
 
 ## Installation
 
@@ -39,7 +40,7 @@ We use Blender to generate custom orthophotos of the scene and overlay the gener
 
 
 ## Toolkit
-We would like to acknowledge the following cool open-source tools and libraries that we used in this project:
+We would like to acknowledge the cool open-source tools and libraries that we used in this project:
 
 - [itk-elastix](https://github.com/InsightSoftwareConsortium/ITKElastix)
 - [elastix](https://elastix.dev/)
