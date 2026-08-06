@@ -6,8 +6,9 @@ This repository contains supporting code for the [pre-print](https://arxiv.org/a
 >
 > (* denotes equal contribution).
 
-This work was presented as a [poster](https://drive.google.com/file/d/12jIgd9ZnOM5mzc70Msj4i2omgVzRI8AT/view) at the CVPR 2025 workshop _CV4Animals_. Click on the image below to watch a clip of the sample data used
-[![Preview of the data](https://github.com/neuroinformatics-unit/zebras-stitching/releases/download/zebras-clip/zebras_screenshot.png)](https://drive.google.com/file/d/1nnaqnp5Sg8IhkfW3T-M1iS7zJ6yGCGe6/view)
+This work was presented as a [poster](https://drive.google.com/file/d/12jIgd9ZnOM5mzc70Msj4i2omgVzRI8AT/view) at the CVPR 2025 workshop _CV4Animals_. Click [here](https://drive.google.com/file/d/1nnaqnp5Sg8IhkfW3T-M1iS7zJ6yGCGe6/view) for a visualisation of the sample data used.
+
+![Preview of the data](https://github.com/neuroinformatics-unit/zebras-stitching/releases/download/zebras-clip/zebras_screenshot.png)
 
 ## Installation
 
