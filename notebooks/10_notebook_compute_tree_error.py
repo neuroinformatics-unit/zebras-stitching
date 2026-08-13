@@ -14,7 +14,7 @@ import pandas as pd
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # Input data
-repo_root = Path(__file__).parent
+repo_root = Path(__file__).parents[1]
 data_dir = repo_root / "data"
 assert data_dir.exists()
 

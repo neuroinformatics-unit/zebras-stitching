@@ -22,7 +22,7 @@ from skimage.transform import warp
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # Input data paths
 
-repo_root = Path(__file__).parents[0]
+repo_root = Path(__file__).parents[1]
 data_dir = repo_root / "data"
 transforms_dir = data_dir / "elastix"
 
