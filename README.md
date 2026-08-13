@@ -39,6 +39,7 @@ Once the trajectories of the animals are "unwrapped" (i.e., in the world coordin
 
 We use Blender to generate custom orthophotos of the scene and overlay the generated 3D trajectories of the animals.
 
+For a step-by-step description of the pipeline and the corresponding notebooks, see [notebooks/README.md](notebooks/README.md).
 
 ## Toolkit
 We would like to acknowledge the cool open-source tools and libraries that we used in this project:
