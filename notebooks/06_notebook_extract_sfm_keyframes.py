@@ -1,6 +1,38 @@
 """Extract transforms in keyframes from the SfM output.
 
 Requires launching this notebook in the opendm container.
+
+Setup:
+
+1. Pull the image:
+     docker pull opendronemap/odm:gpu
+
+2. Start it with the repo root mounted at /workspace, and install the extra
+   packages this notebook needs on top of what the image ships with
+   (jupyter, ipykernel to expose a kernel, plus extra dependencies for `utils.py`):
+     docker run -d --name odm-opensfm \
+       -v <absolute-path-to-project_zebras>:/workspace \
+       -w /workspace/zebras-stitching/notebooks \
+       -p 8888:8888 \
+       --entrypoint bash \
+       opendronemap/odm:gpu \
+       -c "pip install ipykernel jupyter itk itk-elastix xarray && \
+           jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='zebra'"
+
+3. In VS Code: open the notebook and do Select Kernel > Existing Jupyter Server > http://localhost:8888/?token=zebra
+
+Note:
+ * Paths below are hardcoded container-absolute paths (/workspace/...), not
+   derived from __file__: VS Code injects the *host* path into __file__ even
+   though the kernel runs inside the container, so __file__-based paths silently
+   point at files that don't exist in the container's filesystem.
+
+ * Files written by the notebook end up owned by root (the container runs as
+   root). Fix ownership afterwards with:
+     docker exec odm-opensfm chown -R "$(id -u):$(id -g)" /workspace/zebras-stitching
+
+ * To remove the container when done: 
+     docker rm -f odm-opensfm
 """
 
 # %%
@@ -16,8 +48,8 @@ import numpy as np
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # Input data
-opensfm_dir = Path("/workspace/datasets/project/opensfm")
-odm_dataset_dir = Path(__file__).parents[1] / "datasets/project"
+opensfm_dir = Path("/workspace/datasets/project/opensfm_reduced")
+odm_dataset_dir = Path("/workspace/datasets/project")
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # Read reconstruction data
@@ -78,7 +110,8 @@ for frame_filename in list_frame_filenames:
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # Export transforms per keyframe as csv file
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-data_dir = Path(__file__).parent / "data"
+data_dir = Path("/workspace/zebras-stitching/data")
+data_dir.mkdir(exist_ok=True)
 csv_path = data_dir / f"sfm_keyframes_transforms_{timestamp}.csv"
 
 # Write csv
@@ -102,6 +135,4 @@ with open(csv_path, "w") as f:
         rotvec = Rotation.from_matrix(R).as_rotvec()
         writer.writerow([f, *rotvec, *t])
 
-
-# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-# Plot keyframe poses
+# %%
