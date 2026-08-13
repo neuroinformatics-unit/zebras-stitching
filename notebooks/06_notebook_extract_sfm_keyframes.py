@@ -48,7 +48,7 @@ import numpy as np
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # Input data
-opensfm_dir = Path("/workspace/datasets/project/opensfm_reduced")
+opensfm_dir = Path("/workspace/datasets/project/opensfm")
 odm_dataset_dir = Path("/workspace/datasets/project")
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
