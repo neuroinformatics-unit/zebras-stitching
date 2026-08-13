@@ -10,17 +10,21 @@ and cleaned zebra tracks, so it should be executed after
 # Imports
 # -------
 from datetime import datetime
+from functools import partial
 import os
 from pathlib import Path
 
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import numpy as np
+import sleap_io as sio
 import xarray as xr
 from movement.io import load_poses
 from movement.kinematics import compute_pairwise_distances, compute_speed
 from movement.transforms import scale
 from movement.utils.vector import compute_norm, convert_to_unit
+
+# from PIL import Image
 
 # For interactive plots: install ipympl with `pip install ipympl` and uncomment
 # the following line in your notebook
@@ -33,6 +37,7 @@ os.system("movement info")
 # Load unwrapped and cleaned tracks
 # ---------------------------------
 # These come from the output of the "clean_unwrapped_tracks.py" notebook.
+video_path = Path(__file__).parents[2] / "videos" / "21Jan_007.mp4"
 
 repo_root = Path(__file__).parents[1]
 data_dir = repo_root / "data"
@@ -141,11 +146,18 @@ print(polarisation)  # norm is not unit
 # Visualise for a selected frame
 # For reference, the frame index with max polarisation: 3160
 frame_index = 3160
-fig, ax = plt.subplots(1, 2, width_ratios=[1.3, 1])
+video_array = sio.load_video(video_path)
+
+fig = plt.figure(figsize=(12, 8))
+
+ax1 = plt.subplot(2, 2, 1)
+ax2 = plt.subplot(2, 2, 2)
+ax3 = plt.subplot(2, 2, (3, 4))
+
 
 # plot polarisation norm over time
-ax[0].plot(polarisation, zorder=1)
-ax[0].scatter(
+ax1.plot(polarisation, zorder=1)
+ax1.scatter(
     frame_index,
     polarisation.isel(time=frame_index),
     color="black",
@@ -153,19 +165,19 @@ ax[0].scatter(
     s=50,
     zorder=2,
 )
-ax[0].vlines(
+ax1.vlines(
     frame_index,
     ymin=0,
     ymax=1.1,
     color="k",
     linestyle="--",
 )
-ax[0].set_ylim(0, 1.1)
-ax[0].set_xlabel("frame")
-ax[0].set_ylabel("polarisation")
+ax1.set_ylim(0, 1.1)
+ax1.set_xlabel("frame")
+ax1.set_ylabel("polarisation")
 
 # plot individual unit body vectors
-ax[1].quiver(
+ax2.quiver(
     np.zeros((len(body_vector_filtered_unit.individuals), 1)),
     np.zeros((len(body_vector_filtered_unit.individuals), 1)),
     body_vector_filtered_unit.isel(time=frame_index, space=0).values,
@@ -173,11 +185,11 @@ ax[1].quiver(
     angles="xy",
     scale=1,
     scale_units="xy",
-    zorder=1
+    zorder=1,
 )
 
 # plot polarisation vector
-ax[1].quiver(
+ax2.quiver(
     np.zeros((len(polarisation_vector), 1)),
     np.zeros((len(polarisation_vector), 1)),
     polarisation_vector.isel(time=frame_index, space=0).values,
@@ -188,11 +200,11 @@ ax[1].quiver(
     color="red",
     linewidths=1.5,
     edgecolors="r",
-    zorder=3
+    zorder=3,
 )
 
 # plot unit polarisation vector
-ax[1].quiver(
+ax2.quiver(
     np.zeros((len(polarisation_vector), 1)),
     np.zeros((len(polarisation_vector), 1)),
     convert_to_unit(polarisation_vector).isel(time=frame_index, space=0).values,
@@ -200,20 +212,37 @@ ax[1].quiver(
     angles="xy",
     scale=1,
     scale_units="xy",
-    edgecolor=(.3, 0, .7),
-    linewidths=.5,
+    edgecolor=(0.3, 0, 0.7),
+    linewidths=0.5,
     headlength=0,
-    zorder=2
+    zorder=2,
 )
-ax[1].set_xlim(-1, 1)
-ax[1].set_ylim(-1, 1)
-ax[1].set_xticks([-1, 0, 1])
-ax[1].set_yticks([-1, 0, 1])
-ax[1].invert_yaxis()  # to match image coordinate system in video
-ax[1].set_aspect("equal")
-ax[1].set_xlabel("x")
-ax[1].set_ylabel("y")
-ax[1].set_title(f"Unit body vectors at frame {frame_index}", fontsize=10)
+ax2.set_xlim(-1, 1)
+ax2.set_ylim(-1, 1)
+ax2.set_xticks([-1, 0, 1])
+ax2.set_yticks([-1, 0, 1])
+ax2.invert_yaxis()  # to match image coordinate system in video
+ax2.set_aspect("equal")
+ax2.set_xlabel("x")
+ax2.set_ylabel("y")
+ax2.set_title(f"Unit body vectors at frame {frame_index}", fontsize=10)
+
+
+# # Load image from file
+# image_path = (
+#     repo_root.parent / "video-frames" / f"{frame_index:05d}.png"
+# )  # Replace with actual path
+# image = Image.open(image_path)
+
+# # Convert to RGB if needed (in case it's RGBA or other format)
+# if image.mode != "RGB":
+#     image = image.convert("RGB")
+
+
+ax3.matshow(video_array[frame_index][:, :, ::-1])  # bgr -> rgb
+ax3.set_xlabel("x (pixels)")
+ax3.set_ylabel("y (pixels)")
+ax3.set_title(f"Frame {frame_index}", fontsize=10)
 
 plt.tight_layout(w_pad=2)
 
@@ -289,14 +318,14 @@ im = ax.matshow(
 
 # convert frames to seconds in y-axis
 time_ticks_step = 1498
-time_ticks = np.arange(0, len(speed.time), time_ticks_step) 
+time_ticks = np.arange(0, len(speed.time), time_ticks_step)
 time_labels = [f"{t:.0f}" for t in speed.time.values[0:-1:time_ticks_step]]
 ax.set_yticks(time_ticks)
 ax.set_yticklabels(time_labels)
-ax.tick_params(axis='x', bottom=True, top=False, labelbottom=True, labeltop=False)
+ax.tick_params(axis="x", bottom=True, top=False, labelbottom=True, labeltop=False)
 
 ax.set_xlabel("individual")
-ax.set_ylabel("time (s)") 
+ax.set_ylabel("time (s)")
 
 # add colorbar
 cbar = plt.colorbar(im)
@@ -304,7 +333,7 @@ cbar.set_label("speed (BL/s)")
 
 # All values above the 99th percentile are shown in yellow in the colorbar
 speed_99th_percentile = np.round(speed.quantile(0.99)).item()
-ax.get_images()[0].set_clim(0, speed_99th_percentile) 
+ax.get_images()[0].set_clim(0, speed_99th_percentile)
 ax.set_title("Speed per individual across time")
 # %%
 # Plot polarisation and color by log of mean centroid-speed
@@ -464,40 +493,50 @@ ax.set_xlabel("Time (s)")
 # Compute polarisation animation
 # -----------------------------------
 
+
 # Define a function to plot the evolution of the polarisation vector
 # across time
-def polarisation_plot_single_frame(frame_index):
+def polarisation_plot_single_frame(
+    frame_index,
+    polarisation_norm,
+    polarisation_vector,
+    body_vector_unit,
+    video_array,
+    list_axes,
+):
     # clear pre-existing plots
-    ax[0].clear()
-    ax[1].clear()
+    for ax in list_axes:
+        ax.clear()
+
+    ax1, ax2, ax3 = list_axes
 
     # plot polarisation norm over time
-    ax[0].plot(polarisation, color="tab:blue", zorder=1)
-    ax[0].scatter(
+    ax1.plot(polarisation_norm, color="tab:blue", zorder=1)
+    ax1.scatter(
         frame_index,
-        polarisation.isel(time=frame_index),
+        polarisation_norm.isel(time=frame_index),
         color="black",
         marker="o",
         s=50,
         zorder=2,
     )
-    ax[0].vlines(
+    ax1.vlines(
         frame_index,
         ymin=0,
         ymax=1.1,
         color="k",
         linestyle="--",
     )
-    ax[0].set_ylim(0, 1.1)
-    ax[0].set_xlabel("frame")
-    ax[0].set_ylabel("polarisation")
+    ax1.set_ylim(0, 1.1)
+    ax1.set_xlabel("frame")
+    ax1.set_ylabel("polarisation")
 
     # plot individual unit body vectors
-    ax[1].quiver(
-        np.zeros((len(body_vector_filtered_unit.individuals), 1)),
-        np.zeros((len(body_vector_filtered_unit.individuals), 1)),
-        body_vector_filtered_unit.isel(time=frame_index, space=0).values,
-        body_vector_filtered_unit.isel(time=frame_index, space=1).values,
+    ax2.quiver(
+        np.zeros((len(body_vector_unit.individuals), 1)),
+        np.zeros((len(body_vector_unit.individuals), 1)),
+        body_vector_unit.isel(time=frame_index, space=0).values,
+        body_vector_unit.isel(time=frame_index, space=1).values,
         angles="xy",
         scale=1,
         scale_units="xy",
@@ -505,7 +544,7 @@ def polarisation_plot_single_frame(frame_index):
     )
 
     # plot polarisation vector
-    ax[1].quiver(
+    ax2.quiver(
         np.zeros((len(polarisation_vector), 1)),
         np.zeros((len(polarisation_vector), 1)),
         polarisation_vector.isel(time=frame_index, space=0).values,
@@ -520,7 +559,7 @@ def polarisation_plot_single_frame(frame_index):
     )
 
     # plot unit polarisation vector
-    ax[1].quiver(
+    ax2.quiver(
         np.zeros((len(polarisation_vector), 1)),
         np.zeros((len(polarisation_vector), 1)),
         convert_to_unit(polarisation_vector).isel(time=frame_index, space=0).values,
@@ -533,25 +572,36 @@ def polarisation_plot_single_frame(frame_index):
         headlength=0,
         zorder=2,
     )
-    ax[1].set_xlim(-1, 1)
-    ax[1].set_ylim(-1, 1)
-    ax[1].set_xticks([-1, 0, 1])
-    ax[1].set_yticks([-1, 0, 1])
-    ax[1].invert_yaxis()  # to match image coordinate system in video
-    ax[1].set_aspect("equal")
-    ax[1].set_xlabel("x")
-    ax[1].set_ylabel("y")
-    ax[1].set_title(f"Unit body vectors at frame {frame_index}", fontsize=10)
+    ax2.set_xlim(-1, 1)
+    ax2.set_ylim(-1, 1)
+    ax2.set_xticks([-1, 0, 1])
+    ax2.set_yticks([-1, 0, 1])
+    ax2.invert_yaxis()  # to match image coordinate system in video
+    ax2.set_aspect("equal")
+    ax2.set_xlabel("x")
+    ax2.set_ylabel("y")
+    ax2.set_title(f"Unit body vectors at frame {frame_index}", fontsize=10)
+
+    # plot video frame
+    ax3.matshow(video_array[frame_index][:, :, ::-1])  # bgr -> rgb
+    ax3.set_xlabel("x (pixels)")
+    ax3.set_ylabel("y (pixels)")
+    ax3.set_title(f"Frame {frame_index}", fontsize=10)
 
     return ax
 
 
-
 # Plot for first frame
 frame_index = 0
-fig, ax = plt.subplots(1, 2, width_ratios=[1.3, 1])
-ax[0].clear()
-ax[1].clear()
+fig = plt.figure(figsize=(12, 8))
+
+ax1 = plt.subplot(2, 2, 1)
+ax2 = plt.subplot(2, 2, 2)
+ax3 = plt.subplot(2, 2, (3, 4))
+
+ax1.clear()
+ax2.clear()
+ax3.clear()
 polarisation_plot_single_frame(frame_index)
 plt.tight_layout(w_pad=2)
 
@@ -562,9 +612,16 @@ frame_step = 1
 # Create the animation
 anim = animation.FuncAnimation(
     fig,
-    polarisation_plot_single_frame,
+    partial(
+        polarisation_plot_single_frame,
+        polarisation_norm=polarisation,
+        polarisation_vector=polarisation_vector,
+        body_vector_unit=body_vector_filtered_unit,
+        video_array=video_array,
+        list_axes=[ax1, ax2, ax3],
+    ),
     frames=range(start_frame, end_frame, frame_step),
-    interval=np.round((1/ds.fps)*1000, 2),  # delay between frames in ms
+    interval=np.round((1 / ds.fps) * 1000, 2),  # delay between frames in ms
     repeat=False,
     blit=True,  # True for better performance if possible
 )
@@ -572,9 +629,16 @@ anim = animation.FuncAnimation(
 plt.show()
 
 # %%
-# Save the animation as a GIF (can be very slow)
+# Save the animation (can be very slow)
 # by default, the fps is 1/interval in the animation object
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-anim.save(f"polarisation_animation_{timestamp}.gif", writer="pillow")
+
+# Save as GIF
+# anim.save(f"polarisation_animation_{timestamp}.gif", writer="pillow")
+
+
+# To save as MP4 (requires ffmpeg):
+anim.save(f"polarisation_animation_{timestamp}.mp4", writer='ffmpeg')
+
 
 # %%
