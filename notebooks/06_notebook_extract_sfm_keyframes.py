@@ -48,6 +48,20 @@ import numpy as np
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # Input data
+
+# Adapt paths to the required locations. 
+
+# For reproducibility, you can use the subset of the OpenDroneMap output files
+# at https://github.com/neuroinformatics-unit/zebras-stitching/releases/tag/odm-output
+# and follow this steps:
+# 1. Extract it to the location mapped to "workspace" in the container
+#   (i.e. the <absolute-path-to-project_zebras> in the docstring above)
+# 2. Then use here:
+#       opensfm_dir = Path("/workspace/datasets_reduced/project_reduced/opensfm_reduced")
+#       odm_dataset_dir = Path("/workspace/datasets_reduced/project_reduced")
+#
+# The "_reduced" suffix refers to the fact that only a subset of files from the 
+# complete output of ODM is retained for lightweight and reproducibility.
 opensfm_dir = Path("/workspace/datasets/project/opensfm")
 odm_dataset_dir = Path("/workspace/datasets/project")
 
