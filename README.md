@@ -12,13 +12,15 @@ This work was presented as a [poster](https://drive.google.com/file/d/12jIgd9ZnO
 
 ## Installation
 
-From the root of the repository:
+From the root of the repository, run:
 
 ```bash
 conda create -n zebras-env python=3.11 -y
 conda activate zebras-env
 pip install -r requirements.txt
 ```
+
+To run [notebook 06](notebooks/06_notebook_extract_sfm_keyframes.py) a different approach is needed: it reads the SfM output via the [`opensfm`](https://github.com/mapillary/OpenSfM) Python API, which is not installed in the conda environment above. Instead, it is meant to be run inside the [OpenDroneMap](https://github.com/OpenDroneMap/ODM) docker image (`opendronemap/odm`), with the repository directory mounted in it. See the docstring at the top of [the notebook](notebooks/06_notebook_extract_sfm_keyframes.py) for the step-by-step instructions.
 
 
 ## Overview
