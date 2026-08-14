@@ -14,6 +14,7 @@ from functools import partial
 import os
 from pathlib import Path
 
+import matplotlib as mpl
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import numpy as np
@@ -30,6 +31,19 @@ from movement.utils.vector import compute_norm, convert_to_unit
 # the following line in your notebook
 # %matplotlib widget
 # %%
+# Figure settings for the preprint
+# --------------------------------
+# These apply to every figure created below, so exported figures share the
+# same typography. Text is kept as editable text in SVG exports (rather than
+# converted to outlines), so labels can be adjusted in Inkscape.
+mpl.rcParams.update(
+    {
+        "svg.fonttype": "none",
+        "axes.labelsize": 12,
+    }
+)
+
+# %%
 # Print the version of movement that is being used (for reproducibility)
 os.system("movement info")
 
@@ -37,7 +51,7 @@ os.system("movement info")
 # Load unwrapped and cleaned tracks
 # ---------------------------------
 # These come from the output of the "clean_unwrapped_tracks.py" notebook.
-video_path = Path(__file__).parents[2] / "videos" / "21Jan_007.mp4"
+video_path = Path(__file__).parents[2] / "video" / "21Jan_007.mp4"
 
 repo_root = Path(__file__).parents[1]
 data_dir = repo_root / "data"
@@ -260,30 +274,42 @@ cos_body_vector = xr.dot(
 )
 
 # plot
-fig, ax = plt.subplots(1, 2, sharey=True, width_ratios=[4, 1])
-
+fig, ax = plt.subplots(1, 1)
 # plot alignment with unit polarisation vector per individual
-# Empty values (i.e. frames in which the body vector is nans) are shown in white by default.
-# We need a colormap:
-# - with three distinct colors for -1, 0, and 1, and
-# - that does not use white in its range.
-im = ax[0].matshow(
-    cos_body_vector,
+# We use a diverging colormap with three distinct colors for -1, 0, and 1
+# (red - white - blue). Empty values (i.e. frames in which the body vector is
+# nans) are shown in grey, so they are distinguishable from the white midpoint.
+cmap = mpl.colormaps["RdBu"].with_extremes(bad="0.6")
+
+im = ax.matshow(
+    cos_body_vector.transpose("individuals", "time"),
     aspect="auto",
-    cmap="managua",
+    cmap=cmap,
+    vmin=-1,
+    vmax=1,
 )
 cbar = plt.colorbar(im)
 cbar.set_label("alignment with average unit body vector")
-ax[0].get_images()[0].set_clim(-1, 1)
-ax[0].set_xlabel("individuals")
-ax[0].set_ylabel("frame")
 
-# plot the norm of the polarisation vector (i.e. the polarisation) over time
-ax[1].plot(polarisation, np.arange(len(polarisation.time)))
-ax[1].set_xlim(0, 1.1)
-ax[1].set_xlabel(polarisation.name)
+# convert frames to seconds in x-axis (one tick every 50 seconds)
+time_ticks_step = int(round(50 * ds.fps))
+time_ticks = np.arange(0, len(cos_body_vector.time), time_ticks_step)
+time_labels = [f"{t:.0f}" for t in cos_body_vector.time.values[0:-1:time_ticks_step]]
+ax.set_xticks(time_ticks)
+ax.set_xticklabels(time_labels)
+ax.tick_params(axis="x", bottom=True, top=False, labelbottom=True, labeltop=False)
+
+ax.set_xlabel("time (s)")
+ax.set_ylabel("individuals")
 
 plt.tight_layout(w_pad=2.5)
+
+# Save the figure as SVG (text stays editable, see figure settings above)
+fig.savefig(
+    repo_root / f"alignment_with_polarisation_{approach}.svg",
+    format="svg",
+    bbox_inches="tight",
+)
 
 
 # %%
@@ -316,8 +342,8 @@ im = ax.matshow(
     cmap="viridis",
 )
 
-# convert frames to seconds in y-axis
-time_ticks_step = 1498
+# convert frames to seconds in y-axis (one tick every 50 seconds)
+time_ticks_step = int(round(50 * ds.fps))
 time_ticks = np.arange(0, len(speed.time), time_ticks_step)
 time_labels = [f"{t:.0f}" for t in speed.time.values[0:-1:time_ticks_step]]
 ax.set_yticks(time_ticks)
